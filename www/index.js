@@ -69,7 +69,6 @@ const drawCells = () => {
 };
 
 const renderLoop = () => {
-  console.log("aa");
   universe.tick();
 
   drawGrid();

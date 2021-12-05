@@ -2,6 +2,7 @@ mod utils;
 
 extern crate fixedbitset;
 extern crate js_sys;
+extern crate web_sys;
 
 use fixedbitset::FixedBitSet;
 use js_sys::Math::random;
@@ -10,17 +11,15 @@ use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+// #[cfg(feature = "wee_alloc")]
+// #[global_allocator]
+// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Cell {
-    Dead = 0,
-    Alive = 1,
-}
+// macro_rules! log {
+//     ( $( $t:tt )* ) => {
+//         web_sys::console::log_1(&format!( $( $t )* ).into());
+//     }
+// }
 
 #[wasm_bindgen]
 pub struct Universe {
@@ -52,8 +51,8 @@ impl Default for Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new() -> Universe {
-        let width = 128;
-        let height = 128;
+        let width = 32;
+        let height = 32;
 
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
@@ -71,22 +70,31 @@ impl Universe {
 
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
-        self.cells = (0..width * self.height).map(|_i| 0).collect();
+        self.update_cells();
     }
 
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
-        self.cells = (0..self.width * height).map(|_i| 0).collect();
+        self.update_cells();
+    }
+
+    fn update_cells(&mut self) {
+        self.cells = FixedBitSet::with_capacity((self.height * self.width) as usize);
     }
 
     pub fn tick(&mut self) {
         let mut next = self.cells.clone();
+        let a = self.width;
+
+        // log!("{:?}", self.);
 
         for row in 0..self.height {
             for col in 0..self.width {
                 let idx = self.get_index(row, col);
                 let cell = self.cells[idx];
                 let live_neighbors = self.live_neighbor_count(row, col);
+
+                // log!("cell[{}, {}] is index {}", row, col, idx);
 
                 next.set(
                     idx,
@@ -98,6 +106,8 @@ impl Universe {
                         (otherwise, _) => otherwise,
                     },
                 );
+
+                // log!("    it becomes {:?}", next);
             }
         }
 
@@ -143,15 +153,14 @@ impl Universe {
 }
 
 impl Universe {
-    /// Get the dead and alive values of the entire universe.
-    pub fn get_cells(&self) -> &[Cell] {
+    pub fn get_cells(&self) -> &FixedBitSet {
         &self.cells
     }
 
     pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
         for (row, col) in cells.iter().cloned() {
             let idx = self.get_index(row, col);
-            self.cells.set(idx * 8, true);
+            self.cells.set(idx / 8, true);
         }
     }
 }
